@@ -238,10 +238,9 @@ class MultiHeadSelfAttention(MultiHeadAttention):
 
 ########################################
 class sw_block(nn.Module):
-    def __init__(self, in_channels, out_channels, filter_radius, patch_size,temperature=100, dropout=False):
+    def __init__(self, in_channels, out_channels, filter_radius,temperature=100, dropout=False):
         super(sw_block, self).__init__()
         self.filter_radius = filter_radius
-        self.patch_size = patch_size
         self.temperature = temperature
         self.out_channels = out_channels
         assert in_channels == 1
@@ -280,7 +279,7 @@ class HybridSN_network(nn.Module):
     def __init__(self, band, classes):
         super(HybridSN_network, self).__init__()
         self.name = 'HybridSN'
-        self.sw1 = sw_block(1, 1, 4, PATCH_LENGTH, 1000, dropout=False)
+        self.sw1 = sw_block(1, 1, 4, 1000, dropout=False)
         # self.sw2 = sw_block(1, 1, 4, PATCH_LENGTH, 1000, dropout=False)
         # self.sw3 = sw_block(1, 1, 4, PATCH_LENGTH, 1000, dropout=False)
         # self.sw4 = sw_block(1, 1, 4, PATCH_LENGTH, 1000, dropout=False)
