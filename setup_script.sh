@@ -1,3 +1,5 @@
+#!/bin/bash
+
 DATASET_PATH="./dataset"
 CLASS_MAP_PATH="classification_maps"
 MODEL_PATH="models"
@@ -28,11 +30,12 @@ declare -a DATAURL=("http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corre
 
 if [ ! -d "$DATASET_PATH" ]; then
   # Take action if $DIR exists. #
-  echo "Creaating ${DATASET_PATH}..."
+  echo "Creating ${DATASET_PATH}..."
   mkdir "$DATASET_PATH"
 fi
+
 length=${#DATAFILES[@]}
-for (( i = 0; i < length; i++ )); 
+for (( i = 0; i < length; i++ ));
 do
     if [ -f "$DATASET_PATH/${DATAFILES[i]}" ]; then
         ### Take action if $DIR exists ###
@@ -49,17 +52,17 @@ for net in "${NETWORKS[@]}"
 do
   if [ ! -d "$net/$CLASS_MAP_PATH" ]; then
     # Take action if $DIR exists. #
-    echo "Creaating $net/$CLASS_MAP_PATH..."
-    mkdir "$net/$CLASS_MAP_PATH"
+    echo "Creating $net/$CLASS_MAP_PATH..."
+    mkdir -p "$net/$CLASS_MAP_PATH"
   fi
   if [ ! -d "$net/$MODEL_PATH" ]; then
     # Take action if $DIR exists. #
-    echo "Creaating $net/$MODEL_PATH..."
-    mkdir "$net/$MODEL_PATH"
+    echo "Creating $net/$MODEL_PATH..."
+    mkdir -p "$net/$MODEL_PATH"
   fi
   if [ ! -d "$net/$REPORT_PATH" ]; then
     # Take action if $DIR exists. #
-    echo "Creaating $net/$REPORT_PATH..."
-    mkdir "$net/$REPORT_PATH"
+    echo "Creating $net/$REPORT_PATH..."
+    mkdir -p "$net/$REPORT_PATH"
   fi
 done

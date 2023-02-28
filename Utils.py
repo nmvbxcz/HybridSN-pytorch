@@ -132,3 +132,138 @@ def generate_png(all_iter, net, gt_hsi, Dataset, device, total_indices, path):
     classification_map(gt_re, gt_hsi, 300,
                        path + '_gt.png')
     print('------Get classification maps successful-------')
+
+
+def chooseRSdata(dataSetName, train_ratio, normType=1, trainId=0):
+    # 输入：
+    #     dataSetName:高光谱数据集名称。
+    #     train_ratio:训练样本个数，大于一时按个数取，小于1时按百分比取，每一类样本最多取到该类样本总数的一半。
+    #     normType:标准化方式(0:减均值;1：z-score归一化;2： 最大最小值归一化;3:除以最大值归一化)
+    #     radius:均值滤波半径
+    #     trainId：训练集种子序号（0-9，对应randp文件中的随机选择训练集的种子序号）
+
+    # 数据集下载地址（课题组内请从小组QQ群文件下载）：
+    # Indian_pines: https://www.ehu.eus/ccwintco/index.php/Hyperspectral_Remote_Sensing_Scenes#Indian_Pines
+    # PaviaU: http://www.ehu.eus/ccwintco/index.php/Hyperspectral_Remote_Sensing_Scenes#Pavia_University_scene
+    # Salinas:https://www.ehu.eus/ccwintco/index.php/Hyperspectral_Remote_Sensing_Scenes#Salinas_scene
+    # Houston2013:https://hyperspectral.ee.uh.edu/?page_id=459
+    # Houston2018:http://hyperspectral.ee.uh.edu/?page_id=1075
+    # Hyrank(Loukia):https://aistudio.baidu.com/aistudio/datasetdetail/80840
+    # HanChuan, HongHu, LongKou:http://rsidea.whu.edu.cn/resource_WHUHi_sharing.htm
+    # xuzhou:https://ieee-dataport.org/documents/xuzhou-hyspex-dataset
+
+    # 使用示例：
+    # for i in range(10):  # 训练10次
+    #      return XTrain,XTest,YTrain,YTest = chooseRSdata(dataSetName='Indianpines', train_ratio=10, normType=1,radius=0, trainId=i)
+
+    data_path = os.path.join(os.getcwd(), 'dataset/')
+    randp_path = os.path.join(os.getcwd(), 'dataset/randp')
+    if dataSetName == 'IN':
+        data = sio.loadmat(os.path.join(data_path, 'Indian_pines_corrected.mat'))['indian_pines_corrected']
+        labels = sio.loadmat(os.path.join(data_path, 'Indian_pines_gt.mat'))['indian_pines_gt']
+        randp = sio.loadmat(os.path.join(randp_path, 'Indian_pines_randp.mat'))['randp']
+    elif dataSetName == 'PU':
+        data = sio.loadmat(os.path.join(data_path, 'PaviaU.mat'))['paviaU']
+        labels = sio.loadmat(os.path.join(data_path, 'PaviaU_gt.mat'))['paviaU_gt']
+        randp = sio.loadmat(os.path.join(randp_path, 'PaviaU_randp.mat'))['randp']
+    elif dataSetName == 'SV':
+        data = sio.loadmat(os.path.join(data_path, 'Salinas_corrected.mat'))['salinas_corrected']
+        labels = sio.loadmat(os.path.join(data_path, 'Salinas_gt.mat'))['salinas_gt']
+        randp = sio.loadmat(os.path.join(randp_path, 'Salinas_randp.mat'))['randp']
+    elif dataSetName == 'Houston2013'.upper():
+        data = sio.loadmat(os.path.join(data_path, 'Houston2013.mat'))['CASI']
+        labels = sio.loadmat(os.path.join(data_path, 'Houston2013_gt.mat'))['gnd_flag']
+        randp = sio.loadmat(os.path.join(randp_path, 'Houston2013_randp.mat'))['randp']
+    elif dataSetName == 'Houston2018'.upper():
+        data = sio.loadmat(os.path.join(data_path, 'HOU2018_correct'))['img']
+        labels = sio.loadmat(os.path.join(data_path, 'HOU2018_GT.mat'))['GT']
+        randp = sio.loadmat(os.path.join(randp_path, 'Houston2018_randp.mat'))['randp']
+    elif dataSetName == 'Loukia'.upper():
+        data = io.imread(os.path.join(data_path, 'Loukia.tif'))
+        labels = io.imread(os.path.join(data_path, 'Loukia_GT.tif'))
+        randp = sio.loadmat(os.path.join(randp_path, 'Loukia_randp.mat'))['randp']
+    elif dataSetName == 'HanChuan'.upper():
+        data = sio.loadmat(os.path.join(data_path, 'WHU_Hi_HanChuan.mat'))['WHU_Hi_HanChuan']
+        labels = sio.loadmat(os.path.join(data_path, 'WHU_Hi_HanChuan_gt.mat'))['WHU_Hi_HanChuan_gt']
+        randp = sio.loadmat(os.path.join(randp_path, 'WHU_Hi_HanChuan_randp.mat'))['randp']
+    elif dataSetName == 'HongHu'.upper():
+        data = sio.loadmat(os.path.join(data_path, 'WHU_Hi_HongHu.mat'))['WHU_Hi_HongHu']
+        labels = sio.loadmat(os.path.join(data_path, 'WHU_Hi_HongHu_gt.mat'))['WHU_Hi_HongHu_gt']
+        randp = sio.loadmat(os.path.join(randp_path, 'WHU_Hi_HongHu_randp.mat'))['randp']
+    elif dataSetName == 'LongKou'.upper():
+        data = sio.loadmat(os.path.join(data_path, 'WHU_Hi_LongKou.mat'))['WHU_Hi_LongKou']
+        labels = sio.loadmat(os.path.join(data_path, 'WHU_Hi_LongKou_gt.mat'))['WHU_Hi_LongKou_gt']
+        randp = sio.loadmat(os.path.join(randp_path, 'WHU_Hi_LongKou_randp.mat'))['randp']
+    elif dataSetName == 'Xuzhou'.upper():
+        data = sio.loadmat(os.path.join(data_path, 'Xuzhou.mat'))['all_x']
+        labels = sio.loadmat(os.path.join(data_path, 'Xuzhou.mat'))['all_y']
+        randp = sio.loadmat(os.path.join(randp_path, 'Xuzhou_randp.mat'))['randp']
+        data = data.reshape(260, 500, 436)
+        data = data.transpose((1, 0, 2))
+        labels = labels.reshape(260, 500).T
+    else:
+        print("Unknown data set requested.")
+        sys.exit()
+
+    data = np.double(data)
+
+    h, w, c = data.shape
+    data = data.transpose((1, 0, 2))  # 适配matlab的行优先和列优先
+    data = np.reshape(data, [h * w, c])
+
+    # 标准化方式
+    if normType == 0:  # 减均值
+        xx = np.zeros([h * w, c])
+        bias = np.mean(data, axis=0)
+        for i in range(c):
+            xx[:, i] = data[:, i] - bias[i]
+        data = xx
+    elif normType == 1:
+        Scaler = preprocessing.StandardScaler()  # z-score归一化
+        data = Scaler.fit_transform(data)
+    elif normType == 2:
+        min_max_scaler = preprocessing.MinMaxScaler()  # 最大最小值归一化
+        data = min_max_scaler.fit_transform(data)
+    elif normType == 3:
+        Normalize = np.max(data, axis=0)  # 除以最大值归一化
+        xx = data / np.tile(Normalize, (data.shape[0], 1))
+        data = xx
+    else:
+        print("Wrong parameters for normalization.")
+        sys.exit()
+
+    labels = labels.T  # 适配matlab的行优先和列优先
+    labels = np.reshape(labels, [labels.shape[0] * labels.shape[1]])
+    all_class = randp[:, trainId][0]
+
+    for label in range(np.max(labels)):
+        # class_num = all_class[label][0]
+        index = all_class[0, label] - 1  # 随机序列,-1适配matlab下标从1开始
+        index = index.reshape(index.shape[1])
+        indexList = np.where(labels == label + 1)[0]  # 顺序序列,去除0标签
+        ci = len(indexList)
+        datai = data[indexList]
+        if train_ratio != 1:
+            cTrain = max(int((1 - train_ratio) * len(indexList)), 3)
+        else:
+            cTrain = 0
+        # if train_ratio > 1:
+        #     cTrain = round(train_ratio)
+        # elif train_ratio < 1:
+        #     cTrain = round(ci * train_ratio)
+        # if train_ratio > round(ci / 2):
+        #     cTrain = round(ci / 2)
+        cTest = ci - cTrain
+        rs_test_index = np.squeeze(index[0:cTest].astype('int64'))
+        rs_train_index = np.squeeze(index[cTest:cTest + cTrain].astype('int64'))
+        if label == 0:
+            train_ind = indexList[rs_train_index]
+            test_ind = indexList[rs_test_index]
+        else:
+            train_ind = np.append(train_ind, indexList[rs_train_index], axis=0)
+            test_ind = np.append(test_ind, indexList[rs_test_index], axis=0)
+        train_gt = np.zeros_like(labels)
+        train_gt[train_ind] = labels[train_ind]
+        test_gt = np.zeros_like(labels)
+        test_gt[test_ind] = labels[test_ind]
+    return train_ind, test_ind, train_gt.reshape(h,w).T, test_gt.reshape(h,w).T
