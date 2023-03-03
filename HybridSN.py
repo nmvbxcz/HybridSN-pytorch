@@ -7,7 +7,7 @@ import argparse
 import collections
 import math
 import time
-
+from torch.nn import init
 import numpy as np
 import scipy.io as sio
 import torch
@@ -238,12 +238,12 @@ class MultiHeadSelfAttention(MultiHeadAttention):
 
 ########################################
 class sw_block(nn.Module):
-    def __init__(self, in_channels, out_channels, filter_radius,temperature=100, dropout=False):
+    def __init__(self, in_channels, out_channels, filter_radius, temperature=100, dropout=False):
         super(sw_block, self).__init__()
         self.filter_radius = filter_radius
         self.temperature = temperature
         self.out_channels = out_channels
-        assert in_channels == 1
+        assert in_channels == out_channels
 
         # 使用共享的权重创建两个网络层
         # self.register_buffer('swQweight', torch.randn(out_channels, in_channels, (1, filter_radius+1, filter_radius+1)).float())
@@ -252,24 +252,24 @@ class sw_block(nn.Module):
         # self.swHweight = 1.0/((filter_radius+1)*(2*filter_radius+1))
         self.conv1 = nn.Conv3d(in_channels, out_channels, (1, filter_radius+1, filter_radius+1), padding=(0,filter_radius,filter_radius),)
         self.conv2 = nn.Conv3d(in_channels, out_channels, (1, filter_radius+1, filter_radius*2+1), padding=(0,filter_radius,filter_radius))
-        # init.normal_(self.conv1.weight, mean=1.0/((filter_radius+1)*(filter_radius+1)), std=1.0/((filter_radius+1)*(filter_radius+1)))
-        # init.normal_(self.conv1.weight, mean=1.0/((filter_radius+1)*(2*filter_radius+1)), std=1.0/((filter_radius+1)*(2*filter_radius+1)))
+        init.normal_(self.conv1.weight, mean=1.0/((filter_radius+1)*(filter_radius+1)), std=1.0/((filter_radius+1)*(filter_radius+1)))
+        init.normal_(self.conv1.weight, mean=1.0/((filter_radius+1)*(2*filter_radius+1)), std=1.0/((filter_radius+1)*(2*filter_radius+1)))
         self.bn1 = nn.BatchNorm3d(out_channels)
         self.bn2 = nn.BatchNorm3d(out_channels)
         self.softmax = nn.Softmax(dim=1)
-        # self.conv1.requires_grad = False
-        # self.conv2.requires_grad = False
+        self.conv1.requires_grad = False
+        self.conv2.requires_grad = False
 
     def forward(self, x):
         # 将共享的参数传递给网络层
-        x1 = F.relu(self.bn1(self.conv1(x.rot90(0,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :-self.filter_radius] - x.repeat(1,self.out_channels,1,1,1)))   # patch_size - 2*filter_raidus
-        x2 = F.relu(self.bn1(self.conv1(x.rot90(1,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :-self.filter_radius].rot90(-1,dims=[-2,-1]) - x.repeat(1,self.out_channels,1,1,1)))
-        x3 = F.relu(self.bn1(self.conv1(x.rot90(2,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :-self.filter_radius].rot90(-2,dims=[-2,-1]) - x.repeat(1,self.out_channels,1,1,1)))
-        x4 = F.relu(self.bn1(self.conv1(x.rot90(3,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :-self.filter_radius].rot90(-3,dims=[-2,-1]) - x.repeat(1,self.out_channels,1,1,1)))
+        x1 = F.relu(self.bn1(self.conv1(x.rot90(0,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :-self.filter_radius] - x))   # patch_size - 2*filter_raidus
+        x2 = F.relu(self.bn1(self.conv1(x.rot90(1,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :-self.filter_radius].rot90(-1,dims=[-2,-1]) - x))
+        x3 = F.relu(self.bn1(self.conv1(x.rot90(2,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :-self.filter_radius].rot90(-2,dims=[-2,-1]) - x))
+        x4 = F.relu(self.bn1(self.conv1(x.rot90(3,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :-self.filter_radius].rot90(-3,dims=[-2,-1]) - x))
         x5 = F.relu(self.bn2(self.conv2(x.rot90(0,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :] - x))
-        x6 = F.relu(self.bn2(self.conv2(x.rot90(1,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :].rot90(-1,dims=[-2,-1]) - x.repeat(1,self.out_channels,1,1,1)))
-        x7 = F.relu(self.bn2(self.conv2(x.rot90(2,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :].rot90(-2,dims=[-2,-1]) - x.repeat(1,self.out_channels,1,1,1)))
-        x8 = F.relu(self.bn2(self.conv2(x.rot90(3,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :].rot90(-3,dims=[-2,-1]) - x.repeat(1,self.out_channels,1,1,1)))
+        x6 = F.relu(self.bn2(self.conv2(x.rot90(1,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :].rot90(-1,dims=[-2,-1]) - x))
+        x7 = F.relu(self.bn2(self.conv2(x.rot90(2,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :].rot90(-2,dims=[-2,-1]) - x))
+        x8 = F.relu(self.bn2(self.conv2(x.rot90(3,dims=[-2,-1]))[:, :, :, :-self.filter_radius, :].rot90(-3,dims=[-2,-1]) - x))
         x9 = torch.stack([x1, x2, x3, x4, x5, x6, x7, x8], dim=1)
         x_attention = self.softmax(-torch.abs(x9)*self.temperature)
         out = x + torch.sum(x9 * x_attention, dim=1, keepdim=False)
@@ -279,7 +279,7 @@ class HybridSN_network(nn.Module):
     def __init__(self, band, classes):
         super(HybridSN_network, self).__init__()
         self.name = 'HybridSN'
-        self.sw1 = sw_block(1, 1, 4, 1000, dropout=False)
+        self.sw1 = sw_block(32, 32, 1, 1000, dropout=False)
         # self.sw2 = sw_block(1, 1, 4, PATCH_LENGTH, 1000, dropout=False)
         # self.sw3 = sw_block(1, 1, 4, PATCH_LENGTH, 1000, dropout=False)
         # self.sw4 = sw_block(1, 1, 4, PATCH_LENGTH, 1000, dropout=False)
@@ -330,14 +330,13 @@ class HybridSN_network(nn.Module):
                    )
         
     def forward(self, X):
-        x = self.sw1(X)
-        x = self.sw1(x)
-        x = self.sw1(x)
-        x = self.sw1(x)
-        x = self.sw1(x)
-        x = self.conv1(x)
+        # x = self.sw1(X)
+
+
+        x = self.conv1(X)
         x = self.conv2(x)
         x = self.conv3(x)
+        # x = self.sw1(x)
         x = x.view(x.size(0),x.size(1)*x.size(4),x.size(2),x.size(3))
         x = self.conv4(x)
 #         print(x.shape)
